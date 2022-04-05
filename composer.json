@@ -1,6 +1,7 @@
 {
     "name": "edumedia/gar-api-bundle",
     "type": "symfony-bundle",
+    "license": "GPL-3.0-or-later",
     "require": {
         "php": "^7.4 || ^8.0",
         "symfony/http-client": "^5.0",
