@@ -22,7 +22,7 @@ class eduMediaGarApiExtension extends Extension
         $configuration = $this->getConfiguration($configs, $container);
         $config = $this->processConfiguration($configuration, $configs);
 
-        $definition = $container->getDefinition('App\eduMedia\GarApiBundle\Service\GarApiService');
+        $definition = $container->getDefinition('eduMedia\GarApiBundle\Service\GarApiService');
 
         $definition->replaceArgument(0, $config['distributor_id']);
         $definition->replaceArgument(1, $config['ssl_cert']);
