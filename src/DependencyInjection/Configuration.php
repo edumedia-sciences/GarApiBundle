@@ -18,7 +18,7 @@ class Configuration implements ConfigurationInterface
         $rootNode
             ->children()
                 ->scalarNode('distributor_id')
-                    ->info('XML <idDistributeurCom> value.')
+                    ->info('XML’s <idDistributeurCom> value.')
                     ->isRequired()->cannotBeEmpty()->end()
                 ->scalarNode('ssl_cert')
                     ->info('Path to the SSL certificate file (probably a .pem file).')
