@@ -1,0 +1,12 @@
+services:
+  eduMedia\GarApiBundle\Service\GarApiService:
+    public: true
+    arguments:
+      - ''
+      - ''
+      - ''
+      - ''
+      - ''
+  edumedia_gar_api.gar_api_service:
+    alias: eduMedia\GarApiBundle\Service\GarApiService
+    public: true
