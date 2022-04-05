@@ -17,5 +17,13 @@
             "name": "Quentin Thiaucourt",
             "email": "quentin.thiaucourt@edumedia-sciences.com"
         }
-    ]
+    ],
+    "extra": {
+        "symfony": {
+            "endpoint": [
+                "https://api.github.com/repos/edumedia-sciences/gar-api-bundle-recipe/contents/index.json",
+                "flex://defaults"
+            ]
+        }
+    }
 }
