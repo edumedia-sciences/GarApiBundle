@@ -253,8 +253,6 @@ class GarApiService
             'body' => $namespacedXml
         ]);
 
-        file_put_contents('yo.xml', $namespacedXml);
-
         return $response->getStatusCode() === 200;
     }
 
