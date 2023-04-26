@@ -11,7 +11,7 @@ class eduMediaGarApiBundle extends Bundle
      * This is the parent's method, without the naming convention test
      * Because we use a non-conventional alias in the bundle's Extension
      */
-    public function getContainerExtension()
+    public function getContainerExtension(): ?ExtensionInterface
     {
         if (null === $this->extension) {
             $extension = $this->createContainerExtension();
