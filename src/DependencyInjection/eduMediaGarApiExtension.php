@@ -31,7 +31,7 @@ class eduMediaGarApiExtension extends Extension
         $definition->replaceArgument(4, $config['cache_directory']);
     }
 
-    public function getAlias()
+    public function getAlias(): string
     {
         return 'edumedia_gar_api';
     }
