@@ -6,8 +6,16 @@ A Symfony bundle to ease the interaction with the GAR API.
 
 Add an extra Symfony endpoint to allow the execution of the recipe:
 
+You can run the following command:
+
+```shell
+composer config --json extra.symfony.endpoint '["https://api.github.com/repos/edumedia-sciences/gar-api-bundle-recipe/contents/index.json", "flex://defaults"]' --merge
+```
+
+It should now look like this:
+
 ```json5
-//composer.json
+// composer.json
 {
   // (...)
   "extra": {

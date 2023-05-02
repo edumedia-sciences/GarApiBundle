@@ -4,6 +4,7 @@
     "license": "GPL-3.0-or-later",
     "require": {
         "php": "^7.4 || ^8.0",
+        "ext-simplexml": "*",
         "symfony/http-client": "^5.0|^6.0",
         "symfony/framework-bundle": "^5.0|^6.0"
     },
