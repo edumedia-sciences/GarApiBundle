@@ -9,12 +9,8 @@ use eduMedia\GarApiBundle\Service\vo\GarSubscription;
 use Exception;
 use SimpleXMLElement;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
-use Symfony\Component\HttpClient\NativeHttpClient;
-use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Component\HttpClient\CurlHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 class GarApiService
 {
@@ -47,7 +43,7 @@ class GarApiService
         $this->remoteEnv = $remoteEnv;
         $this->cacheDirectory = $cacheDirectory;
 
-        $this->client = new NativeHttpClient([
+        $this->client = new CurlHttpClient([
             'local_cert' => $this->sslCert,
             'local_pk'   => $this->sslKey,
             'headers'    => [
