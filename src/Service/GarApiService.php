@@ -6,6 +6,7 @@ use eduMedia\GarApiBundle\Service\vo\GarAssignment;
 use eduMedia\GarApiBundle\Service\vo\GarCreatableSubscriptionInterface;
 use eduMedia\GarApiBundle\Service\vo\GarResource;
 use eduMedia\GarApiBundle\Service\vo\GarSubscription;
+use eduMedia\GarApiBundle\Service\vo\GarSubscriptionFilter;
 use Exception;
 use SimpleXMLElement;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
@@ -22,7 +23,7 @@ class GarApiService
     private string $cacheDirectory;
 
     private const ENDPOINT_PREFIXES = [
-        'prod' => "https://abonnement.gar.education.fr",
+        'prod'    => "https://abonnement.gar.education.fr",
         'preprod' => "https://abonnement.partenaire.test-gar.education.fr",
     ];
 
@@ -36,7 +37,8 @@ class GarApiService
         string $sslKey,
         string $remoteEnv,
         string $cacheDirectory
-    ) {
+    )
+    {
         $this->distributorId = $distributorId;
         $this->sslCert = $sslCert;
         $this->sslKey = $sslKey;
@@ -165,23 +167,23 @@ class GarApiService
     /**
      * @return GarSubscription[]
      */
-    public function getInstitutionSubscriptions(string $uai): array {
+    public function getInstitutionSubscriptions(string $uai): array
+    {
+        $filter = new GarSubscriptionFilter();
+        $filter->uai = $uai;
 
-        $filter = <<<FILTER
-            <filtres xmlns="http://www.atosworldline.com/wsabonnement/v1.0/">
-                <filtre>
-                    <filtreNom>idDistributeurCom</filtreNom>
-                    <filtreValeur>{$this->distributorId}</filtreValeur>
-                </filtre>
-                <filtre>
-                    <filtreNom>uaiEtab</filtreNom>
-                    <filtreValeur>{$uai}</filtreValeur>
-                </filtre>
-            </filtres>
-        FILTER;
+        return $this->getSubscriptions($filter);
+    }
+
+    public function getSubscriptions(?GarSubscriptionFilter $filter = null): array
+    {
+
+        if (is_null($filter)) {
+            $filter = new GarSubscriptionFilter();
+        }
 
         $response = $this->client->request('POST', $this->getEndpoint('/abonnements'), [
-            'body' => $filter
+            'body' => $filter->getNodeString(),
         ]);
 
         $xml = simplexml_load_string($response->getContent());
@@ -222,7 +224,8 @@ class GarApiService
         return $response->getStatusCode() === 201;
     }
 
-    private function getSubscriptionXml(string $subscriptionId): ?SimpleXMLElement {
+    private function getSubscriptionXml(string $subscriptionId): ?SimpleXMLElement
+    {
         $filter = <<<FILTER
             <filtres xmlns="http://www.atosworldline.com/wsabonnement/v1.0/">
                 <filtre>
@@ -249,7 +252,8 @@ class GarApiService
         return null;
     }
 
-    public function updateSubscriptionDates(string $subscriptionId, GarCreatableSubscriptionInterface $subscription): bool {
+    public function updateSubscriptionDates(string $subscriptionId, GarCreatableSubscriptionInterface $subscription): bool
+    {
         $xml = $this->getSubscriptionXml($subscriptionId);
 
         if (is_null($xml)) {
