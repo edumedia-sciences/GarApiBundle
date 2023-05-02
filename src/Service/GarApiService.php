@@ -10,6 +10,11 @@ use Exception;
 use SimpleXMLElement;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use Symfony\Component\HttpClient\NativeHttpClient;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 class GarApiService
 {
@@ -81,7 +86,28 @@ class GarApiService
         return $this->cacheDirectory . '/' . date('Y/m/d.') . $extension;
     }
 
-    public function getInstitutions()
+    /**
+     * @return array<string, array{
+     *     uai: string,
+     *     nature_uai: string,
+     *     nature_uai_libe: string,
+     *     type_uai: string,
+     *     type_uai_libe: string,
+     *     commune: string,
+     *     commune_libe: string,
+     *     academie: string,
+     *     academie_libe: string,
+     *     departement_insee_3: string,
+     *     departement_insee_3_libe: string,
+     *     appellation_officielle: string,
+     *     patronyme_uai: string,
+     *     code_postal_uai: string,
+     *     localite_acheminement_uai: string,
+     *     idENT: string,
+     * }>
+     * @throws ExceptionInterface
+     */
+    public function getInstitutions(): array
     {
 
         if (isset($this->cachedInstitutions)) {
