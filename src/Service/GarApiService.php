@@ -52,10 +52,10 @@ class GarApiService
         ]);
 
         if (!file_exists($sslCert)) {
-            throw new FileNotFoundException(sprintf("SSL Cert: %s does not exists", $sslCert));
+            throw new FileNotFoundException(sprintf("SSL Cert: %s does not exist", $sslCert));
         }
         if (!file_exists($sslKey)) {
-            throw new FileNotFoundException(sprintf("SSL Key: %s does not exists", $sslCert));
+            throw new FileNotFoundException(sprintf("SSL Key: %s does not exist", $sslCert));
         }
         if (!is_dir($cacheDirectory)) {
             try {
