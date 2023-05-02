@@ -1,0 +1,4 @@
+name: gar-api-bundle
+recipe: symfony
+config:
+  webroot: nowhere
