@@ -2,15 +2,14 @@
 
 namespace eduMedia\GarApiBundle\Service\vo;
 
-use DateTime;
+use DateTimeInterface;
 
 interface GarCreatableSubscriptionInterface
 {
 
     function getGarUai(): string;
     function getGarSubscriptionId(): string;
-    function getGarResourceId(): string;
-    function getGarSubscriptionFrom(): ?DateTime;
-    function getGarSubscriptionTo(): ?DateTime;
+    function getGarSubscriptionFrom(): ?DateTimeInterface;
+    function getGarSubscriptionTo(): ?DateTimeInterface;
 
 }
