@@ -69,6 +69,11 @@ class GarApiService
         }
     }
 
+    public function isProd(): bool
+    {
+        return $this->remoteEnv === 'prod';
+    }
+
     private function getEndpointPrefix(): string
     {
         return self::ENDPOINT_PREFIXES[$this->remoteEnv];
@@ -164,17 +169,6 @@ class GarApiService
         return array_key_exists($uai, $this->getInstitutions());
     }
 
-    /**
-     * @return GarSubscription[]
-     */
-    public function getInstitutionSubscriptions(string $uai): array
-    {
-        $filter = new GarSubscriptionFilter();
-        $filter->uai = $uai;
-
-        return $this->getSubscriptions($filter);
-    }
-
     public function getSubscriptions(?GarSubscriptionFilter $filter = null): array
     {
 
@@ -190,7 +184,13 @@ class GarApiService
         $subscriptions = array();
 
         foreach ($xml->children() as $subscriptionNode) {
-            $subscriptions[] = GarSubscription::createFromNode($subscriptionNode);
+            $garSubscription = GarSubscription::createFromNode($subscriptionNode);
+
+            if ($filter->resourceId && $garSubscription->getResourceId() !== $filter->resourceId) {
+                continue;
+            }
+
+            $subscriptions[] = $garSubscription;
         }
 
         return $subscriptions;
