@@ -11,6 +11,9 @@ class GarSubscriptionFilter
     public ?string $assignmentType = null;
     public ?string $assignmentCategory = null;
     public ?string $targetAudience = null;
+    public ?string $resourceProjectCode = null;
+
+    // This can be used to filter subscriptions after loading them (not a native filter)
     public ?string $resourceId = null;
     
     public function getNodeString(): string {
@@ -41,8 +44,8 @@ class GarSubscriptionFilter
             $filters['publicCible'] = $this->targetAudience;
         }
 
-        if ($this->resourceId) {
-            $filters['codeProjetRessource'] = $this->resourceId;
+        if ($this->resourceProjectCode) {
+            $filters['codeProjetRessource'] = $this->resourceProjectCode;
         }
         
         $filterNodes = array_map(function($key, $value) {
