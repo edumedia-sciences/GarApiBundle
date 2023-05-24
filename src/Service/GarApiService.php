@@ -2,16 +2,21 @@
 
 namespace eduMedia\GarApiBundle\Service;
 
+use DateTimeImmutable;
 use eduMedia\GarApiBundle\Service\vo\GarAssignment;
 use eduMedia\GarApiBundle\Service\vo\GarCreatableSubscriptionInterface;
+use eduMedia\GarApiBundle\Service\vo\GarReport;
 use eduMedia\GarApiBundle\Service\vo\GarResource;
 use eduMedia\GarApiBundle\Service\vo\GarSubscription;
 use eduMedia\GarApiBundle\Service\vo\GarSubscriptionFilter;
 use Exception;
 use SimpleXMLElement;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpClient\CurlHttpClient;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use ZipArchive;
 
 class GarApiService
 {
@@ -21,10 +26,19 @@ class GarApiService
     private string $sslKey;
     private string $remoteEnv;
     private string $cacheDirectory;
+    private ?string $reportSslCert = null;
+    private ?string $reportSslKey = null;
+
+    private CurlHttpClient $client;
+    private ?CurlHttpClient $reportClient = null;
 
     private const ENDPOINT_PREFIXES = [
         'prod'    => "https://abonnement.gar.education.fr",
         'preprod' => "https://abonnement.partenaire.test-gar.education.fr",
+    ];
+    private const REPORT_ENDPOINT_PREFIXES = [
+        'prod'    => "https://ws-rapports-affectation.gar.education.fr",
+        'preprod' => "https://ws-rapports-affectation.partenaire.test-gar.education.fr",
     ];
 
     public const DATE_FORMAT = "Y-m-d\TH:i:s";
@@ -36,7 +50,9 @@ class GarApiService
         string $sslCert,
         string $sslKey,
         string $remoteEnv,
-        string $cacheDirectory
+        string $cacheDirectory,
+        ?string $reportSslCert = null,
+        ?string $reportSslKey = null
     )
     {
         $this->distributorId = $distributorId;
@@ -44,6 +60,8 @@ class GarApiService
         $this->sslKey = $sslKey;
         $this->remoteEnv = $remoteEnv;
         $this->cacheDirectory = $cacheDirectory;
+        $this->reportSslKey = $reportSslKey;
+        $this->reportSslCert = $reportSslCert;
 
         $this->client = new CurlHttpClient([
             'local_cert' => $this->sslCert,
@@ -67,6 +85,17 @@ class GarApiService
                 throw new FileNotFoundException("Could not find or create cache directory $cacheDirectory");
             }
         }
+
+        if (isset($this->reportSslKey) && isset($this->reportSslCert)) {
+            $this->reportClient = new CurlHttpClient([
+                'local_cert' => $this->reportSslCert,
+                'local_pk'   => $this->reportSslKey,
+                'headers'    => [
+                    "Content-type: application/xml",
+                    "Accept: application/json",
+                ],
+            ]);
+        }
     }
 
     public function isProd(): bool
@@ -82,6 +111,16 @@ class GarApiService
     private function getEndpoint(string $path): string
     {
         return $this->getEndpointPrefix() . $path;
+    }
+
+    private function getReportEndpointPrefix(): string
+    {
+        return self::REPORT_ENDPOINT_PREFIXES[$this->remoteEnv];
+    }
+
+    private function getReportEndpoint(string $path): string
+    {
+        return $this->getReportEndpointPrefix() . $path;
     }
 
     private function getInstitutionPath($extension): string
@@ -290,6 +329,189 @@ class GarApiService
         );
 
         return $response->getStatusCode() === 204;
+    }
+
+    /**
+     * @return GarReport[]
+     */
+    public function getReports(bool $notAcknowledged = true, bool $acknowledged = false): array {
+        if (!$notAcknowledged && !$acknowledged) {
+            return [];
+        }
+
+        if ($notAcknowledged && $acknowledged) {
+            $status = GarReport::STATUS_ALL;
+        } else {
+            $status = $notAcknowledged ? GarReport::STATUS_NOT_ACKNOWLEDGED : GarReport::STATUS_ACKNOWLEDGED;
+        }
+
+        $response = $this->reportClient->request('GET', $this->getReportEndpoint(sprintf("/rapportsAffectation/%s/%s", $this->distributorId, $status)));
+        $content = $response->getContent();
+        $data = json_decode($content, true);
+
+        return array_map(function($data) {
+            return (new GarReport())
+                ->setName($data['nomRapport'])
+                ->setTimestamp((DateTimeImmutable::createFromFormat('d/m/Y', $data['dateCreation']))->setTime(0, 0))
+                ->setSize($data['taille'])
+                ->setStatus($data['statut']);
+        }, array_filter($data['rapportsAffectation'], function($data) {
+            return array_key_exists('statut', $data);
+        }));
+    }
+
+    private function getGlobalReportDirectory(): string {
+        $dir = $this->cacheDirectory . '/reports/global';
+
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+
+        return $dir;
+    }
+
+    private function getTodayGlobalReportPath(): string {
+        return $this->getGlobalReportDirectory() . '/' . date('Y-m-d') . '.xml';
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function ensureReportCertificate(): void {
+        if (is_null($this->reportClient)) {
+            throw new Exception("You must configure the report certificate parameters (`report_ssl_*`) to use this feature");
+        }
+    }
+
+    private function ensureLatestGlobalReport(): string {
+        $todayPath = $this->getTodayGlobalReportPath();
+
+        if (file_exists($todayPath)) {
+            return $todayPath;
+        }
+
+        // Remove old files
+        $oldFiles = (new Finder())->in($this->getGlobalReportDirectory())->files()->name('*.xml');
+        foreach ($oldFiles as $oldFile) {
+            unlink($oldFile->getRealPath());
+        }
+
+        $this->ensureReportCertificate();
+
+        // We don't care about the status filter because the global report is listed in all responses
+        $response = $this->reportClient->request('GET', $this->getReportEndpoint(sprintf("/rapportsAffectation/%s/%s", $this->distributorId, GarReport::STATUS_ACKNOWLEDGED)));
+        $content = $response->getContent();
+        $data = json_decode($content, true);
+
+        $reportData = $data['rapportsAffectation'][count($data['rapportsAffectation']) - 1];
+
+        $report = (new GarReport())
+            ->setName($reportData['nomRapport'])
+            ->setTimestamp((DateTimeImmutable::createFromFormat('d/m/Y', $reportData['dateCreation']))->setTime(0, 0))
+            ->setSize($reportData['taille']);
+
+        $xmlPath = $this->downloadReport($report);
+        rename($xmlPath, $todayPath);
+
+        return $todayPath;
+    }
+
+    private function downloadReport(string|GarReport $report): string {
+        $this->ensureReportCertificate();
+
+        $reportIdentifier = is_string($report) ? $report : $report->getName();
+        $response = $this->reportClient->request('GET', $this->getReportEndpoint(sprintf("/GAR-Affectations/%s/%s", $this->distributorId, $reportIdentifier)));
+        $directory = $this->cacheDirectory . '/reports';
+
+        if (!is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $zipPath = $directory . '/' . $reportIdentifier;
+        file_put_contents($zipPath, $response->getContent());
+
+        $zip = new ZipArchive();
+        $zip->open($zipPath);
+
+        $files = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $files[] = $zip->getNameIndex($i);
+        }
+
+        $zip->extractTo($directory);
+        $zip->close();
+
+        unlink($zipPath);
+        return $directory . '/' . $files[0];
+    }
+
+    /**
+     * @param array{resourceId?: string, uai?: string|string[]} $options
+     * @return array{
+     *     resource: array{
+     *          id: string,
+     *          title: string
+     *      },
+     *     subscription: array{
+     *          id: string,
+     *          end: DateTimeImmutable
+     *      },
+     *     uai: string
+     * }[]
+     */
+    public function getGlobalReportItems(array $options = []): array {
+        $xml = simplexml_load_file($this->ensureLatestGlobalReport());
+
+        $resolver = new OptionsResolver();
+        $resolver->define('resourceId')->allowedTypes('string');
+        $resolver->define('uai')->allowedTypes('string', 'string[]');
+
+        $resolvedOptions = $resolver->resolve($options);
+
+        $xpath = '//GARRessource';
+        if (array_key_exists('resourceId', $resolvedOptions)) {
+            $xpath .= "[@idRessource='$resolvedOptions[resourceId]']";
+        }
+
+        $xpath .= '/GARAbonnement/GAREtablissement';
+
+        if (array_key_exists('uai', $resolvedOptions)/* && count($resolvedOptions['uai']) > 0*/) {
+
+            /** @var string|string[] $uaiOption */
+            $uaiOption = $resolvedOptions['uai'];
+
+            /** @var string[] $uaiList */
+            $uaiList = is_string($uaiOption) ? [$uaiOption] : $uaiOption;
+
+            if (count($uaiList) > 0) {
+                $selectors = array_map(function($uai) {
+                    return "@UAI='$uai'";
+                }, $uaiList);
+
+                $xpath .= "[".implode(' or ', $selectors)."]";
+            }
+        }
+
+        /** @var SimpleXMLElement[] $institutions */
+        $institutions = $xml->xpath($xpath);
+
+        $items = [];
+
+        foreach ($institutions as $institution) {
+            $items[] = [
+                'resource' => [
+                    'id' => (string) $institution->xpath('../..')[0]['idRessource'],
+                    'title' => (string) $institution->xpath('../..')[0]['titreRessource'],
+                ],
+                'subscription' => [
+                    'id' => (string) $institution->xpath('..')[0]['idAbonnement'],
+                    'end' => (DateTimeImmutable::createFromFormat('Y-m-d', (string) $institution->xpath('..')[0]['finValidite']))->setTime(0, 0),
+                ],
+                'uai' => (string) $institution['UAI'],
+            ];
+        }
+
+        return $items;
     }
 
 }

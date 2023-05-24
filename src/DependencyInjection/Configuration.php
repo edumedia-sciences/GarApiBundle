@@ -11,7 +11,7 @@ class Configuration implements ConfigurationInterface
     /**
      * @inheritDoc
      */
-    public function getConfigTreeBuilder()
+    public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('edumedia_gar_api');
         $rootNode = $treeBuilder->getRootNode();
@@ -32,6 +32,12 @@ class Configuration implements ConfigurationInterface
                 ->scalarNode('cache_directory')
                     ->info('Directory where GAR data is cached.')
                     ->isRequired()->cannotBeEmpty()->end()
+                ->scalarNode('report_ssl_cert')
+                    ->info('Path to the report SSL certificate file (probably a .pem file).')
+                    ->cannotBeEmpty()->end()
+                ->scalarNode('report_ssl_key')
+                    ->info('Path to the report SSL key file (probably a .key file).')
+                    ->cannotBeEmpty()->end()
             ->end();
 
         return $treeBuilder;

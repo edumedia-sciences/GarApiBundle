@@ -13,7 +13,7 @@ class eduMediaGarApiExtension extends Extension
     /**
      * @inheritDoc
      */
-    public function load(array $configs, ContainerBuilder $container)
+    public function load(array $configs, ContainerBuilder $container): void
     {
 
         $loader = new YamlFileLoader($container, new FileLocator(\dirname(__DIR__).'/Resources/config'));
@@ -29,6 +29,8 @@ class eduMediaGarApiExtension extends Extension
         $definition->replaceArgument(2, $config['ssl_key']);
         $definition->replaceArgument(3, $config['remote_env']);
         $definition->replaceArgument(4, $config['cache_directory']);
+        $definition->replaceArgument(5, $config['report_ssl_cert'] ?? null);
+        $definition->replaceArgument(6, $config['report_ssl_key'] ?? null);
     }
 
     public function getAlias(): string
