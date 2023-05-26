@@ -237,6 +237,9 @@ class GarApiService
 
     public function createSubscription(GarCreatableSubscriptionInterface $subscription, GarResource $resource, GarAssignment $assignment): bool
     {
+        $cpr = $subscription->getGarSubscriptionResourceProjectCode();
+        $cprTag = isset($cpr) ? "<codeProjetRessource>$cpr</codeProjetRessource>" : '';
+
         $input = <<<XML
             <abonnement xmlns="http://www.atosworldline.com/wsabonnement/v1.0/">
                 <idAbonnement>{$subscription->getGarSubscriptionId()}</idAbonnement>
@@ -251,6 +254,7 @@ class GarApiService
                 <typeAffectation>{$assignment->getType()}</typeAffectation>
                 <nbLicenceGlobale>{$assignment->getNumGlobalLicence()}</nbLicenceGlobale>
                 {$assignment->getAudienceTags()}
+                {$cprTag}
             </abonnement>
         XML;
 

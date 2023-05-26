@@ -11,5 +11,6 @@ interface GarCreatableSubscriptionInterface
     function getGarSubscriptionId(): string;
     function getGarSubscriptionFrom(): ?DateTimeInterface;
     function getGarSubscriptionTo(): ?DateTimeInterface;
+    function getGarSubscriptionResourceProjectCode(): ?string;
 
 }
