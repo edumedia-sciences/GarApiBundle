@@ -1,6 +1,7 @@
 services:
   eduMedia\GarApiBundle\Service\GarApiService:
     public: true
+    lazy: true
     arguments:
       - ''
       - ''
