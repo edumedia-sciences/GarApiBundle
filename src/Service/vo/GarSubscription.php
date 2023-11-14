@@ -25,15 +25,16 @@ class GarSubscription
         foreach ($xml->children() as $child) {
             $childName = $child->getName();
 
-            if (array_key_exists($childName, $data) && is_array($data[$childName])) {
-                $data[$childName][] = (string)$child;
-                continue;
+            if (!array_key_exists($childName, $data)) {
+                $data[$childName] = [];
             }
 
-            if (!array_key_exists($childName, $data)) {
-                $data[$childName] = (string)$child;
-            } else {
-                $data[$childName] = [$data[$childName]];
+            $data[$childName][] = (string)$child;
+        }
+
+        foreach ($data as $key => $value) {
+            if (count($value) === 1) {
+                $data[$key] = $value[0];
             }
         }
 
