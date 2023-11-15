@@ -44,6 +44,7 @@ class GarApiService
     public const DATE_FORMAT = "Y-m-d\TH:i:s";
 
     private ?array $cachedInstitutions = null;
+    private ?array $cachedInstitutionUAIs = null;
 
     public function __construct(
         string $distributorId,
@@ -123,9 +124,9 @@ class GarApiService
         return $this->getReportEndpointPrefix() . $path;
     }
 
-    private function getInstitutionPath($extension): string
+    private function getInstitutionPath($extension, bool $uaiOnly = false): string
     {
-        return $this->cacheDirectory . '/' . date('Y/m/d.') . $extension;
+        return $this->cacheDirectory . '/' . date('Y/m/d.') . ($uaiOnly ? 'uai-only.' : '') . $extension;
     }
 
     /**
@@ -151,7 +152,6 @@ class GarApiService
      */
     public function getInstitutions(): array
     {
-
         if (isset($this->cachedInstitutions)) {
             return $this->cachedInstitutions;
         }
@@ -168,8 +168,10 @@ class GarApiService
                     mkdir(dirname($xmlPath), 0777, true);
                 }
 
+                $this->cachedInstitutions = $this->xmlToInstitutionArray($content);
+
                 file_put_contents($xmlPath, $content);
-                $this->cachedInstitutions = $this->xmlToPhp($content, $phpPath);
+                file_put_contents($phpPath, "<?php\nreturn " . var_export($this->cachedInstitutions, true) . ";");
             } else {
                 $this->cachedInstitutions = [];
             }
@@ -180,8 +182,40 @@ class GarApiService
         return $this->cachedInstitutions;
     }
 
-    private function xmlToPhp(string $xml, string $path): array
-    {
+    /**
+     * @return string[]
+     * @throws ExceptionInterface
+     */
+    public function getInstitutionUAIs(): array {
+        if (isset($this->cachedInstitutionUAIs)) {
+            return $this->cachedInstitutionUAIs;
+        }
+
+        $phpPath = $this->getInstitutionPath('php', true);
+        if (!file_exists($phpPath)) {
+            $response = $this->client->request('GET', $this->getEndpoint('/etablissements/etablissements.xml'));
+
+            if ($response->getStatusCode() === 200) {
+                $content = $response->getContent();
+
+                if (!is_dir(dirname($phpPath))) {
+                    mkdir(dirname($phpPath), 0777, true);
+                }
+
+                $this->cachedInstitutionUAIs = array_keys($this->xmlToInstitutionArray($content));
+
+                file_put_contents($phpPath, "<?php\nreturn " . var_export($this->cachedInstitutionUAIs, true) . ";");
+            } else {
+                $this->cachedInstitutionUAIs = [];
+            }
+        } else {
+            $this->cachedInstitutionUAIs = include $phpPath;
+        }
+
+        return $this->cachedInstitutionUAIs;
+    }
+
+    private function xmlToInstitutionArray(string $xml): array {
         $xml = simplexml_load_string(
             $xml,
             "SimpleXMLElement",
@@ -198,14 +232,15 @@ class GarApiService
             $ar[$institutionData['uai']] = $institutionData;
         }
 
-        file_put_contents($path, "<?php\nreturn " . var_export($ar, true) . ";");
-
         return $ar;
     }
 
+    /**
+     * @throws ExceptionInterface
+     */
     public function hasInstitution(string $uai): bool
     {
-        return array_key_exists($uai, $this->getInstitutions());
+        return in_array($uai, $this->getInstitutionUAIs());
     }
 
     public function getSubscriptions(?GarSubscriptionFilter $filter = null): array
