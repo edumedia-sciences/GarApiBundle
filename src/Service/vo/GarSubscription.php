@@ -15,6 +15,7 @@ class GarSubscription
     private DateTime $to;
     private string $uai;
     private array $audience;
+    private ?string $resourceCode = null;
 
     public const DATE_FORMAT = "Y-m-d\TH:i:s.uT";
 
@@ -46,6 +47,7 @@ class GarSubscription
             ->setTo(DateTime::createFromFormat(self::DATE_FORMAT, $data['finValidite']))
             ->setUai($data['uaiEtab'])
             ->setAudience($data['publicCible'])
+            ->setResourceCode(array_key_exists('codeProjetRessource', $data) ? $data['codeProjetRessource'] : null)
             ;
     }
 
@@ -181,5 +183,25 @@ class GarSubscription
 
         return $this;
     }
+
+    /**
+     * @return string|null
+     */
+    public function getResourceCode(): ?string
+    {
+        return $this->resourceCode;
+    }
+
+    /**
+     * @param string|null $resourceCode
+     * @return GarSubscription
+     */
+    public function setResourceCode(?string $resourceCode): GarSubscription
+    {
+        $this->resourceCode = $resourceCode;
+
+        return $this;
+    }
+
 
 }
