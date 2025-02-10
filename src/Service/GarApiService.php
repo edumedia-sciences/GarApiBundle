@@ -547,6 +547,7 @@ class GarApiService
                     'end' => (DateTimeImmutable::createFromFormat('Y-m-d', (string) $institution->xpath('..')[0]['finValidite']))->setTime(0, 0),
                 ],
                 'uai' => (string) $institution['UAI'],
+                'numAssignments' => count($institution->xpath('./Affectation')),
             ];
         }
 
